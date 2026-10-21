@@ -1,5 +1,5 @@
 // Minimal client for the public Power BI "querydata" endpoint used by the report.
-const ENDPOINT = '/pbi/public/reports/querydata?synchronous=true'
+const ENDPOINT = 'https://wabi-us-gov-iowa-api.analysis.usgovcloudapi.net/public/reports/querydata?synchronous=true'
 const RESOURCE_KEY = '8d368efd-fa3a-4072-aece-90acdcf1bd23'
 const ENTITIES = { f: 'FACILITY_RESERVATION', a: 'ACTIVE_HUB_DATES', f1: 'FACILITIES' }
 

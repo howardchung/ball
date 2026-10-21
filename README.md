@@ -4,5 +4,5 @@ Shows Gilman, Beacon Hill and Miller court reservations for the current week (Mo
     npm install
     npm run dev      # open the printed localhost URL
 
-A proxy (vite.config.js) forwards /pbi/* to the Power BI Gov API; the app needs `npm run dev` or `npm run preview`.
+Requests go directly to https://wabi-us-gov-iowa-api.analysis.usgovcloudapi.net from the browser.
 Edit `LOCATIONS` in src/App.jsx to change locations.

@@ -88,7 +88,7 @@ export default function App() {
       </header>
 
       {state.status === 'loading' && <p className="note">Loading from Power BI…</p>}
-      {state.status === 'error' && <div className="error"><b>Couldn’t load data.</b> {state.error}<br />Make sure you’re running via <code>npm run dev</code> (the proxy is required).</div>}
+      {state.status === 'error' && <div className="error"><b>Couldn’t load data.</b> {state.error}<br />If this is a network/CORS error, check the browser console.</div>}
       {state.status === 'ready' && !facilities.length && (
         <div className="error">No facilities matched “{LOCATIONS.join(', ')}”. The dataset’s names may differ; edit <code>LOCATIONS</code> in <code>src/App.jsx</code>.</div>
       )}
