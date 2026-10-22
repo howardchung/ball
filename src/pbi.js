@@ -12,7 +12,13 @@ export const notNull = (s, p) => ({
   Condition: { Not: { Expression: { Comparison: { ComparisonKind: 0, Left: col(s, p), Right: { Literal: { Value: 'null' } } } } } },
 })
 
-// select: [[alias, property], ...]; where: condition objects
+// Date range condition: [from, to) as local "YYYY-MM-DDTHH:mm:ss" strings (Where items are ANDed)
+export const dateRange = (s, p, fromIso, toIso) => [
+  { Condition: { Comparison: { ComparisonKind: 2, Left: col(s, p), Right: { Literal: { Value: `datetime'${fromIso}'` } } } } },
+  { Condition: { Comparison: { ComparisonKind: 3, Left: col(s, p), Right: { Literal: { Value: `datetime'${toIso}'` } } } } },
+]
+
+// select: [[alias, property, 'm'?], ...] ('m' marks a measure); where: condition objects
 export async function runQuery({ select, where = [] }) {
   const aliases = [...new Set([...select.map((s) => s[0]), ...where.map(whereAliases).flat()])]
   const body = {
@@ -22,7 +28,10 @@ export async function runQuery({ select, where = [] }) {
         Query: {
           Version: 2,
           From: aliases.map((a) => ({ Name: a, Entity: ENTITIES[a], Type: 0 })),
-          Select: select.map(([a, p]) => ({ ...col(a, p), Name: `${ENTITIES[a]}.${p}` })),
+          Select: select.map(([a, p, kind]) => ({
+            ...(kind === 'm' ? { Measure: { Expression: { SourceRef: { Source: a } }, Property: p } } : col(a, p)),
+            Name: `${ENTITIES[a]}.${p}`,
+          })),
           Where: where,
         },
         Binding: {
