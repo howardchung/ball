@@ -1,7 +1,7 @@
 // Minimal client for the public Power BI "querydata" endpoint used by the report.
 const ENDPOINT = 'https://wabi-us-gov-iowa-api.analysis.usgovcloudapi.net/public/reports/querydata?synchronous=true'
 const RESOURCE_KEY = '8d368efd-fa3a-4072-aece-90acdcf1bd23'
-const ENTITIES = { f: 'FACILITY_RESERVATION', a: 'ACTIVE_HUB_DATES', f1: 'FACILITIES' }
+const ENTITIES = { f: 'FACILITY_RESERVATION', a: 'ACTIVE_HUB_DATES', f1: 'FACILITIES', o: 'Facility_Overlaps' }
 
 const col = (s, p) => ({ Column: { Expression: { SourceRef: { Source: s } }, Property: p } })
 const lit = (v) => ({ Literal: { Value: `'${String(v).replace(/'/g, "''")}'` } })
@@ -18,8 +18,9 @@ export const dateRange = (s, p, fromIso, toIso) => [
   { Condition: { Comparison: { ComparisonKind: 3, Left: col(s, p), Right: { Literal: { Value: `datetime'${toIso}'` } } } } },
 ]
 
-// select: [[alias, property, 'm'?], ...] ('m' marks a measure); where: condition objects
-export async function runQuery({ select, where = [] }) {
+// select: [[alias, property, kind?, name?], ...] (kind 'm' marks a measure); where: condition objects.
+// showEmpty keeps dimension members that have no matching reservations (like the report's table).
+export async function runQuery({ select, where = [], showEmpty = false }) {
   const aliases = [...new Set([...select.map((s) => s[0]), ...where.map(whereAliases).flat()])]
   const body = {
     version: '1.0.0',
@@ -28,14 +29,14 @@ export async function runQuery({ select, where = [] }) {
         Query: {
           Version: 2,
           From: aliases.map((a) => ({ Name: a, Entity: ENTITIES[a], Type: 0 })),
-          Select: select.map(([a, p, kind]) => ({
+          Select: select.map(([a, p, kind, name]) => ({
             ...(kind === 'm' ? { Measure: { Expression: { SourceRef: { Source: a } }, Property: p } } : col(a, p)),
-            Name: `${ENTITIES[a]}.${p}`,
+            Name: name || `${ENTITIES[a]}.${p}`,
           })),
           Where: where,
         },
         Binding: {
-          Primary: { Groupings: [{ Projections: select.map((_, i) => i) }] },
+          Primary: { Groupings: [{ Projections: select.map((_, i) => i), ...(showEmpty ? { ShowItemsWithNoData: select.map((_, i) => i) } : {}) }] },
           DataReduction: { DataVolume: 4, Primary: { Window: { Count: 30000 } } },
           Version: 1,
         },
