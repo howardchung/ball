@@ -62,7 +62,7 @@ export async function runQuery({ select, where = [] }) {
 const whereAliases = (c) => [...JSON.stringify(c).matchAll(/"Source":"(\w+)"/g)].map((m) => m[1])
 
 // Decode Power BI's compressed "DSR" row format into plain arrays.
-function decode(data) {
+export function decode(data) {
   const ds = data?.dsr?.DS?.[0]
   const rows = ds?.PH?.[0]?.DM0
   if (!rows) return []
@@ -79,9 +79,12 @@ function decode(data) {
       if (R & bit) cur[i] = prev[i]
       else if (N & bit) cur[i] = null
       else {
-        let v = row.C[ci++]
-        if (schema[i].DN) v = dicts[schema[i].DN][v]
-        cur[i] = v
+        let v = row.C?.[ci++]
+        // Dictionary-encoded columns send an index while the dictionary has room, then
+        // inline strings once it is full, so only look up numeric values.
+        const dict = schema[i].DN && dicts[schema[i].DN]
+        if (dict && typeof v === 'number') v = dict[v] ?? v
+        cur[i] = v ?? null
       }
     }
     out.push(cur)
