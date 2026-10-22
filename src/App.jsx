@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { runQuery, inCond, notNull, dateRange } from './pbi.js'
 
 const LOCATIONS = ['Gilman', 'Beacon Hill', 'Miller']
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const NUM_DAYS = 7 // today plus the next 6 days
 
-const weekStart = (d = new Date()) => { const s = new Date(d.getFullYear(), d.getMonth(), d.getDate()); s.setDate(s.getDate() - ((s.getDay() + 6) % 7)); return s }
+const startOfToday = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r }
+const dayIndex = (d, from) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - from) / 864e5)
 const fmtDay = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 const p2 = (n) => String(n).padStart(2, '0')
 const iso = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}:00`
@@ -47,11 +49,13 @@ export default function App() {
   const [rows, setRows] = useState([])
   const [centers, setCenters] = useState([])
   const [attempts, setAttempts] = useState([])
-  const start = useMemo(() => weekStart(), [])
-  const end = useMemo(() => { const e = new Date(start); e.setDate(e.getDate() + 7); return e }, [start])
+  const [start, setStart] = useState(startOfToday) // midnight today; reset on every refresh
+  const end = useMemo(() => addDays(start, NUM_DAYS), [start])
 
   const load = useCallback(async () => {
     setState({ status: 'loading', error: null })
+    const start = startOfToday(), end = addDays(start, NUM_DAYS)
+    setStart(start)
     const log = []
     try {
       const all = await runQuery({ select: [['f1', 'CENTER_NAME'], ['f1', 'FACILITY_NAME']] })
@@ -69,8 +73,8 @@ export default function App() {
             return got
           } catch (e) { log.push({ label: `${center}: ${label}`, ok: false, error: e.message }); return [] }
         }
-        // 1) every reservation this week (date range on the reservation table)
-        let got = await run('this week (date range)', [...base, ...dateRange('f', 'RESERVATION_START_DATE', iso(start), iso(end))])
+        // 1) every reservation in the next 7 days (date range on the reservation table)
+        let got = await run('next 7 days (date range)', [...base, ...dateRange('f', 'RESERVATION_START_DATE', iso(start), iso(end))])
         // 2) fall back to the report's own query: "Today" slicer + dt_do
         if (!got.some((r) => r.start)) {
           const today = await run('Today slicer', [...base, inCond('a', 'DateForSlicer', ['Today']), notNull('a', 'dt_do'), notNull('a', 'DateForSlicer')])
@@ -86,7 +90,7 @@ export default function App() {
       setAttempts(log)
       setState({ status: 'error', error: e.message })
     }
-  }, [start, end])
+  }, [])
 
   useEffect(() => { load() }, []) // eslint-disable-line
 
@@ -101,20 +105,20 @@ export default function App() {
     })
     const grid = courts.map((c) => ({
       name: c,
-      days: DAYS.map((_, i) => mine.filter((r) => r.court === c && ((r.start.getDay() + 6) % 7) === i).sort((a, b) => a.start - b.start)),
+      days: Array.from({ length: NUM_DAYS }, (_, i) => mine.filter((r) => r.court === c && dayIndex(r.start, start) === i).sort((a, b) => a.start - b.start)),
     }))
     return { loc, total: mine.length, grid }
   }), [rows, start, end])
 
-  const todayIdx = (new Date().getDay() + 6) % 7
-  const weekEnd = new Date(end); weekEnd.setDate(weekEnd.getDate() - 1)
+  const todayIdx = 0 // the first column is always today
+  const lastDay = addDays(start, NUM_DAYS - 1)
 
   return (
     <main>
       <header>
         <div>
           <h1>Court reservations</h1>
-          <p className="sub">Week of {fmtDay(start)} – {fmtDay(weekEnd)} · Gilman, Beacon Hill, Miller</p>
+          <p className="sub">Next 7 days: {fmtDay(start)} – {fmtDay(lastDay)} · Gilman, Beacon Hill, Miller</p>
         </div>
         <div className="controls">
           <button onClick={load} disabled={state.status === 'loading'}>Refresh</button>
@@ -131,14 +135,14 @@ export default function App() {
         <section>
           <div className="scroll">
             <table>
-              <thead><tr><th className="court">Court</th>{DAYS.map((d, i) => {
-                const dt = new Date(start); dt.setDate(dt.getDate() + i)
-                return <th key={d} className={i === todayIdx ? 'today' : ''}>{d}<small>{fmtDay(dt)}</small></th>
+              <thead><tr><th className="court">Court</th>{Array.from({ length: NUM_DAYS }, (_, i) => {
+                const dt = addDays(start, i)
+                return <th key={i} className={i === todayIdx ? 'today' : ''}>{i === 0 ? 'Today' : dt.toLocaleDateString(undefined, { weekday: 'short' })}<small>{fmtDay(dt)}</small></th>
               })}</tr></thead>
               {byLocation.map(({ loc, total, grid }) => (
                 <tbody key={loc}>
-                  <tr className="loc"><th colSpan={DAYS.length + 1}>{loc} <span className="badge">{total} reservations</span></th></tr>
-                  {!grid.length && state.status === 'ready' && <tr><td colSpan={DAYS.length + 1} className="note">No courts found.</td></tr>}
+                  <tr className="loc"><th colSpan={NUM_DAYS + 1}>{loc} <span className="badge">{total} reservations</span></th></tr>
+                  {!grid.length && state.status === 'ready' && <tr><td colSpan={NUM_DAYS + 1} className="note">No courts found.</td></tr>}
                   {grid.map((g) => (
                     <tr key={g.name}>
                       <th className="court">{g.name}</th>
@@ -162,7 +166,7 @@ export default function App() {
 
       <details className="diag">
         <summary>Diagnostics</summary>
-        <p>Reservations loaded: {rows.filter((r) => r.start).length} · this week: {byLocation.reduce((n, l) => n + l.total, 0)}</p>
+        <p>Reservations loaded: {rows.filter((r) => r.start).length} · next 7 days: {byLocation.reduce((n, l) => n + l.total, 0)}</p>
         {attempts.map((a, i) => (
           <div key={i} className="attempt">
             <b>{a.label}</b>: {a.ok ? `${a.count} (${a.extras})` : <span className="bad">failed – {a.error}</span>}
