@@ -127,35 +127,38 @@ export default function App() {
         <div className="error">No centers matched “{LOCATIONS.join(', ')}”. The dataset’s names may differ; edit <code>LOCATIONS</code> in <code>src/App.jsx</code>.</div>
       )}
 
-      {byLocation.map(({ loc, total, grid }) => (
-        <section key={loc}>
-          <h2>{loc} <span className="badge">{total} reservations</span></h2>
-          {!grid.length ? <p className="note">No courts found.</p> : (
-            <div className="scroll">
-              <table>
-                <thead><tr><th>Court</th>{DAYS.map((d, i) => {
-                  const dt = new Date(start); dt.setDate(dt.getDate() + i)
-                  return <th key={d} className={i === todayIdx ? 'today' : ''}>{d}<small>{fmtDay(dt)}</small></th>
-                })}</tr></thead>
-                <tbody>{grid.map((g) => (
-                  <tr key={g.name}>
-                    <th className="court">{g.name}</th>
-                    {g.days.map((list, i) => (
-                      <td key={i} className={i === todayIdx ? 'today' : ''}>
-                        {list.length ? (
-                          <ul>{list.map((r, j) => (
-                            <li key={j}>{compact(r.label)}{r.use && r.use !== 'Other' ? <small> {r.use}</small> : null}</li>
-                          ))}</ul>
-                        ) : <span className="zero">–</span>}
-                      </td>
-                    ))}
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          )}
+      {state.status !== 'error' && (
+        <section>
+          <div className="scroll">
+            <table>
+              <thead><tr><th className="court">Court</th>{DAYS.map((d, i) => {
+                const dt = new Date(start); dt.setDate(dt.getDate() + i)
+                return <th key={d} className={i === todayIdx ? 'today' : ''}>{d}<small>{fmtDay(dt)}</small></th>
+              })}</tr></thead>
+              {byLocation.map(({ loc, total, grid }) => (
+                <tbody key={loc}>
+                  <tr className="loc"><th colSpan={DAYS.length + 1}>{loc} <span className="badge">{total} reservations</span></th></tr>
+                  {!grid.length && state.status === 'ready' && <tr><td colSpan={DAYS.length + 1} className="note">No courts found.</td></tr>}
+                  {grid.map((g) => (
+                    <tr key={g.name}>
+                      <th className="court">{g.name}</th>
+                      {g.days.map((list, i) => (
+                        <td key={i} className={i === todayIdx ? 'today' : ''}>
+                          {list.length ? (
+                            <ul>{list.map((r, j) => (
+                              <li key={j}>{compact(r.label)}{r.use && r.use !== 'Other' ? <small> {r.use}</small> : null}</li>
+                            ))}</ul>
+                          ) : <span className="zero">–</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
+            </table>
+          </div>
         </section>
-      ))}
+      )}
 
       <details className="diag">
         <summary>Diagnostics</summary>

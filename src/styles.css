@@ -30,3 +30,6 @@ code{font-size:13px}
 .diag summary{cursor:pointer}
 .attempt{margin:8px 0}.bad{color:var(--warnt)}
 .mono{font:12px ui-monospace,monospace;margin-left:12px;word-break:break-all}
+tr.loc th{text-align:left;font-size:15px;padding:14px 6px 8px;border-bottom:2px solid var(--line)}
+tr.loc th .badge{margin-left:8px;vertical-align:middle}
+td.note{text-align:left}
