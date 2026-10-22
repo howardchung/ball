@@ -13,14 +13,16 @@ section{background:var(--card);border:1px solid var(--line);border-radius:12px;p
 h2{margin:0 0 12px;font-size:18px;display:flex;gap:10px;align-items:center}
 .badge{font-size:12px;font-weight:500;background:var(--soft);color:var(--accent);padding:2px 9px;border-radius:99px}
 .scroll{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:560px}
+table{border-collapse:collapse;width:100%;min-width:860px}
 th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);vertical-align:top}
 th small{display:block;font-weight:400;color:var(--muted);font-size:11px}
 th.court{text-align:left;font-weight:500}
 .today{background:var(--soft)}
-.cell{min-width:34px;font-weight:600;color:var(--accent)}
 .zero{color:var(--muted)}
-ul{list-style:none;margin:6px 0 0;padding:0;font-size:12px;color:var(--muted)}
+td ul{list-style:none;margin:0;padding:0;font-size:12px;text-align:center}
+td li{padding:2px 0;white-space:nowrap}
+td li small{color:var(--muted);font-size:11px}
+th.court{white-space:nowrap}
 .note{color:var(--muted)}
 .error{background:var(--warn);color:var(--warnt);padding:12px 14px;border-radius:10px;margin-bottom:16px}
 code{font-size:13px}

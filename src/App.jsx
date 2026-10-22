@@ -35,12 +35,18 @@ const toRows = (center, data) => data.map(([court, url, date, st, en, use, label
   return { center, court, url, use, start, label: label2 || label || null, rawDate: date }
 })
 
+// "8:45 AM - 10:00 AM" -> "8:45–10:00 AM"; "11:15 AM - 12:30 PM" -> "11:15 AM–12:30 PM"
+const compact = (l) => {
+  const m = /^\s*(\d+:\d+)(?::\d+)?\s*(AM|PM)\s*-\s*(\d+:\d+)(?::\d+)?\s*(AM|PM)\s*$/i.exec(l || '')
+  if (!m) return l || ''
+  return m[2].toUpperCase() === m[4].toUpperCase() ? `${m[1]}–${m[3]} ${m[4].toUpperCase()}` : `${m[1]} ${m[2].toUpperCase()}–${m[3]} ${m[4].toUpperCase()}`
+}
+
 export default function App() {
   const [state, setState] = useState({ status: 'loading', error: null })
   const [rows, setRows] = useState([])
   const [centers, setCenters] = useState([])
   const [attempts, setAttempts] = useState([])
-  const [open, setOpen] = useState(null)
   const start = useMemo(() => weekStart(), [])
   const end = useMemo(() => { const e = new Date(start); e.setDate(e.getDate() + 7); return e }, [start])
 
@@ -134,15 +140,15 @@ export default function App() {
                 <tbody>{grid.map((g) => (
                   <tr key={g.name}>
                     <th className="court">{g.name}</th>
-                    {g.days.map((list, i) => {
-                      const key = `${g.name}-${i}`
-                      return (
-                        <td key={i} className={i === todayIdx ? 'today' : ''}>
-                          {list.length ? <button className="cell" onClick={() => setOpen(open === key ? null : key)}>{list.length}</button> : <span className="zero">–</span>}
-                          {open === key && <ul>{list.map((r, j) => <li key={j}>{r.label}{r.use ? ` · ${r.use}` : ''}</li>)}</ul>}
-                        </td>
-                      )
-                    })}
+                    {g.days.map((list, i) => (
+                      <td key={i} className={i === todayIdx ? 'today' : ''}>
+                        {list.length ? (
+                          <ul>{list.map((r, j) => (
+                            <li key={j}>{compact(r.label)}{r.use && r.use !== 'Other' ? <small> {r.use}</small> : null}</li>
+                          ))}</ul>
+                        ) : <span className="zero">–</span>}
+                      </td>
+                    ))}
                   </tr>
                 ))}</tbody>
               </table>
